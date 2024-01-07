@@ -1,5 +1,10 @@
+import 'dart:io';
+
+import 'package:chat_app/widgets/user_image_picker.dart';
 import 'package:flutter/material.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 final firebase = FirebaseAuth.instance;
 
@@ -15,23 +20,33 @@ class _AuthScreenState extends State<AuthScreen> {
   final formKey = GlobalKey<FormState>();
   var enteredEmail = '';
   var enteredPassword = '';
+  File? selectedImage;
 
-  submit() {
+  submit() async {
     final isValid = formKey.currentState!.validate();
 
-    if (isValid) {
+    if (!isValid || !isLogin && selectedImage == null) {
+      // error message ...
       return;
     }
 
     formKey.currentState!.save();
 
     if (isLogin) {
-      final userData = firebase.signInWithEmailAndPassword(
+      final userData = await firebase.signInWithEmailAndPassword(
           email: enteredEmail, password: enteredPassword);
     } else {
       try {
-        final userData = firebase.createUserWithEmailAndPassword(
+        final userData = await firebase.createUserWithEmailAndPassword(
             email: enteredEmail, password: enteredPassword);
+
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('user_images')
+            .child('${userData.user!.uid}.jpg');
+        await storageRef.putFile(selectedImage!);
+        final imageUrl = await storageRef.getDownloadURL();
+        print(imageUrl);
       } on FirebaseAuthException catch (error) {
         if (error.code == 'email-already-in-use') {
           //.. (obsługa błędu)
@@ -55,7 +70,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             children: [
               Container(
-                margin: const EdgeInsets.only(top: 100, bottom: 30),
+                margin: const EdgeInsets.only(top: 40, bottom: 10),
                 width: 200,
                 child: Image.asset('assets/chat.png'),
               ),
@@ -67,6 +82,12 @@ class _AuthScreenState extends State<AuthScreen> {
                     key: formKey,
                     child: Column(
                       children: [
+                        if (!isLogin)
+                          UserImagePicker(
+                            onPickImage: (pickedImage) {
+                              selectedImage = pickedImage;
+                            },
+                          ),
                         //
                         TextFormField(
                           validator: (value) {
