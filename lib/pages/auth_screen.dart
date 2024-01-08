@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 final firebase = FirebaseAuth.instance;
+final db = FirebaseFirestore.instance;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -21,6 +23,8 @@ class _AuthScreenState extends State<AuthScreen> {
   var enteredEmail = '';
   var enteredPassword = '';
   File? selectedImage;
+  var isAuthenticating = false;
+  var enteredUsername = '';
 
   submit() async {
     final isValid = formKey.currentState!.validate();
@@ -32,11 +36,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
     formKey.currentState!.save();
 
-    if (isLogin) {
-      final userData = await firebase.signInWithEmailAndPassword(
-          email: enteredEmail, password: enteredPassword);
-    } else {
-      try {
+    try {
+      setState(() {
+        isAuthenticating = true;
+      });
+
+      if (isLogin) {
+        final userData = await firebase.signInWithEmailAndPassword(
+            email: enteredEmail, password: enteredPassword);
+      } else {
         final userData = await firebase.createUserWithEmailAndPassword(
             email: enteredEmail, password: enteredPassword);
 
@@ -47,17 +55,28 @@ class _AuthScreenState extends State<AuthScreen> {
         await storageRef.putFile(selectedImage!);
         final imageUrl = await storageRef.getDownloadURL();
         print(imageUrl);
-      } on FirebaseAuthException catch (error) {
-        if (error.code == 'email-already-in-use') {
-          //.. (obsługa błędu)
-        }
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.message ?? 'Authentication failed.'),
-          ),
-        );
+
+        await db.collection('users').doc(userData.user!.uid).set({
+          'username': enteredUsername,
+          'email': enteredEmail,
+          'image_url': imageUrl,
+        });
       }
+
+//
+//
+//
+//
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'email-already-in-use') {
+        //.. (obsługa błędu)
+      }
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.message ?? 'Authentication failed.'),
+        ),
+      );
     }
   }
 
@@ -109,6 +128,28 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                           onSaved: (newValue) => enteredEmail = newValue!,
                         ),
+                        const SizedBox(height: 20),
+                        if(!isLogin)
+                        TextFormField(
+                          validator: (value) {
+                            if (value == null ||
+                                value.isEmpty ||
+                                value.trim().length < 4) {
+                              return 'please enter at least 4 characters.';
+                            }
+                            return null;
+                          },
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            label: Text('Username'),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(20),
+                              ),
+                            ),
+                          ),
+                          onSaved: (newValue) => enteredUsername = newValue!,
+                        ),
                         //
                         const SizedBox(height: 20),
                         //
@@ -132,24 +173,27 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                         //
                         const SizedBox(height: 20),
+                        if (isAuthenticating) const CircularProgressIndicator(),
                         //
-                        ElevatedButton(
-                          onPressed: submit,
-                          child: Text(isLogin ? 'Login' : 'Signup'),
-                        ),
+                        if (!isAuthenticating)
+                          ElevatedButton(
+                            onPressed: submit,
+                            child: Text(isLogin ? 'Login' : 'Signup'),
+                          ),
                         //
                         const SizedBox(height: 20),
                         //
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              isLogin = !isLogin;
-                            });
-                          },
-                          child: Text(isLogin
-                              ? 'Create an account'
-                              : 'I have an acount'),
-                        ),
+                        if (!isAuthenticating)
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                isLogin = !isLogin;
+                              });
+                            },
+                            child: Text(isLogin
+                                ? 'Create an account'
+                                : 'I have an acount'),
+                          ),
                       ],
                     ),
                   ),
