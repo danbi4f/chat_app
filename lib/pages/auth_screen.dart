@@ -56,11 +56,13 @@ class _AuthScreenState extends State<AuthScreen> {
         final imageUrl = await storageRef.getDownloadURL();
         print(imageUrl);
 
-        await db.collection('users').doc(userData.user!.uid).set({
-          'username': enteredUsername,
-          'email': enteredEmail,
-          'image_url': imageUrl,
-        });
+        await db.collection('users').doc(userData.user!.uid).set(
+          {
+            'username': enteredUsername,
+            'email': enteredEmail,
+            'image_url': imageUrl,
+          },
+        );
       }
 
 //
@@ -129,27 +131,27 @@ class _AuthScreenState extends State<AuthScreen> {
                           onSaved: (newValue) => enteredEmail = newValue!,
                         ),
                         const SizedBox(height: 20),
-                        if(!isLogin)
-                        TextFormField(
-                          validator: (value) {
-                            if (value == null ||
-                                value.isEmpty ||
-                                value.trim().length < 4) {
-                              return 'please enter at least 4 characters.';
-                            }
-                            return null;
-                          },
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            label: Text('Username'),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(20),
+                        if (!isLogin)
+                          TextFormField(
+                            validator: (value) {
+                              if (value == null ||
+                                  value.isEmpty ||
+                                  value.trim().length < 4) {
+                                return 'please enter at least 4 characters.';
+                              }
+                              return null;
+                            },
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              label: Text('Username'),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(20),
+                                ),
                               ),
                             ),
+                            onSaved: (newValue) => enteredUsername = newValue!,
                           ),
-                          onSaved: (newValue) => enteredUsername = newValue!,
-                        ),
                         //
                         const SizedBox(height: 20),
                         //

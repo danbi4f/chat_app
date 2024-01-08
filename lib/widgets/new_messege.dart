@@ -20,17 +20,17 @@ class _NewMessageState extends State<NewMessage> {
       return;
     }
     final user = FirebaseAuth.instance.currentUser!;
-    final userData = await
-        db.collection('users').doc(user.uid).get();
+    final userData = await db.collection('users').doc(user.uid).get();
 
-        db.collection('chat').add({
-          'text':enteredMessage,
-          'createdAt': Timestamp.now(),
-          'userId': user.uid,
-          'username': userData.data()!['username'],
-          'userImage': userData.data()!['image_url'],
-        });
-
+    db.collection('chat').add(
+      {
+        'text': enteredMessage,
+        'createdAt': Timestamp.now(),
+        'userId': user.uid,
+        'username': userData.data()!['username'],
+        'userImage': userData.data()!['image_url'],
+      },
+    );
 
     messageController.clear();
   }
